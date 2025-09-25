@@ -1,5 +1,6 @@
-import json
 import redis
+import redis
+import json
 from datetime import datetime, timedelta
 
 

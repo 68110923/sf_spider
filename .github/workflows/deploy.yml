@@ -1,0 +1,107 @@
+name: Deploy Scrapy Spider with Supervisor
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'V*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Validate secrets
+        run: |
+          # 验证必要的secrets是否存在
+          if [[ -z "${{ secrets.SERVER_IP }}" || -z "${{ secrets.SERVER_USERNAME }}" || -z "${{ secrets.SSH_PRIVATE_KEY }}" || -z "${{ secrets.PROJECT_PATH }}" ]]; then
+            echo "Error: Missing required secrets"
+            echo "Required secrets: SERVER_IP, SERVER_USERNAME, SSH_PRIVATE_KEY, PROJECT_PATH"
+            exit 1
+          fi
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            set -e  # 遇到错误立即退出
+            
+            # 确保项目目录存在
+            mkdir -p ${{ secrets.PROJECT_PATH }}
+            cd ${{ secrets.PROJECT_PATH }}
+            
+            # 如果是首次部署，初始化git仓库
+            if [ ! -d ".git" ]; then
+              git clone ${{ github.repositoryUrl }} .
+              git checkout main
+            else
+              # 否则拉取最新代码
+              git pull origin main
+            fi
+            
+            # 创建虚拟环境（如果不存在）
+            if [ ! -d ".venv" ]; then
+              echo "Creating virtual environment..."
+              python3 -m venv .venv
+            fi
+            
+            # 激活虚拟环境
+            echo "Activating virtual environment..."
+            source .venv/bin/activate
+            
+            # 升级pip
+            pip install --upgrade pip
+            
+            # 安装依赖
+            echo "Installing dependencies..."
+            pip install -r gettnship/requirements.txt
+            
+            # 安装Playwright浏览器
+            echo "Installing Playwright browsers..."
+            playwright install
+            
+            # 创建Supervisor配置文件目录（如果不存在）
+            echo "Configuring Supervisor..."
+            sudo mkdir -p /etc/supervisor/conf.d/
+            
+            # 创建爬虫Supervisor配置文件
+            cat > /tmp/scrapy_spider.conf << 'EOF'
+            [program:gettnship_spider]
+            directory=${{ secrets.PROJECT_PATH }}
+            command=${{ secrets.PROJECT_PATH }}/.venv/bin/python -m scrapy crawl gettnship_shipments -s DEBUG=False
+            autostart=true
+            autorestart=true
+            startretries=3
+            user=${{ secrets.SERVER_USERNAME }}
+            redirect_stderr=true
+            stdout_logfile=${{ secrets.PROJECT_PATH }}/logs/spider.log
+            stdout_logfile_maxbytes=10MB
+            stdout_logfile_backups=5
+            # 环境变量设置
+            environment=PATH="${{ secrets.PROJECT_PATH }}/.venv/bin:%(ENV_PATH)s"
+            EOF
+            
+            # 移动配置文件到Supervisor配置目录
+            sudo mv /tmp/scrapy_spider.conf /etc/supervisor/conf.d/
+            
+            # 创建日志目录并设置权限
+            echo "Setting up log directory..."
+            mkdir -p logs
+            chmod 755 logs
+            
+            # 更新Supervisor配置并重启服务
+            echo "Updating Supervisor and restarting services..."
+            sudo supervisorctl reread
+            sudo supervisorctl update
+            
+            # 检查爬虫状态
+            echo "Checking spider status..."
+            sudo supervisorctl status gettnship_spider
+            
+            echo "Deployment completed successfully!"

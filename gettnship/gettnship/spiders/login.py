@@ -133,9 +133,9 @@ class GettnshipLoginSpider(BaseSpider, PlaywrightActions, HttpxAction):
 
 if __name__ == '__main__':
     settings = get_project_settings()
-    settings.update(dict(
-        DEBUG=True,
-    ))
+    # settings.update(dict(
+    #     DEBUG=True,
+    # ))
     process = CrawlerProcess(settings)
     process.crawl(GettnshipLoginSpider)
     process.start()
