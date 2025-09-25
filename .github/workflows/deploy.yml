@@ -83,8 +83,8 @@ jobs:
             stdout_logfile=${{ secrets.PROJECT_PATH }}/logs/spider.log
             stdout_logfile_maxbytes=10MB
             stdout_logfile_backups=5
-            # 环境变量设置
-            environment=PATH="${{ secrets.PROJECT_PATH }}/.venv/bin:%(ENV_PATH)s"
+            # 环境变量设置 - 添加PYTHONPATH确保能找到sf_spider模块
+            environment=PATH="${{ secrets.PROJECT_PATH }}/.venv/bin:%(ENV_PATH)s",PYTHONPATH="${{ secrets.PROJECT_PATH }}:%(ENV_PYTHONPATH)s"
             EOF
             
             # 移动配置文件到Supervisor配置目录
