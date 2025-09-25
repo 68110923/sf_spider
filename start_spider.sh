@@ -5,6 +5,9 @@
 # 设置项目路径
 export PROJECT_PATH="$(cd "$(dirname "$0")" && pwd)"
 
+# 设置PYTHONPATH环境变量，确保Python能找到sf_spider模块
+export PYTHONPATH="$PROJECT_PATH:$PYTHONPATH"
+
 # 激活虚拟环境
 source $PROJECT_PATH/.venv/bin/activate
 
