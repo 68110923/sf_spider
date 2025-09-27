@@ -19,11 +19,11 @@ class GettnshipShipmentsSpider(BaseSpider, PlaywrightActions, HttpxAction):
 
     custom_settings = dict(
         # 并发请求数
-        CONCURRENT_REQUESTS=3,
+        CONCURRENT_REQUESTS=15,
         # 每个域名的并发请求数
-        CONCURRENT_REQUESTS_PER_DOMAIN=1,
+        CONCURRENT_REQUESTS_PER_DOMAIN=5,
         # 下载延迟（秒）
-        DOWNLOAD_DELAY=1,
+        DOWNLOAD_DELAY=0,
         ITEM_PIPELINES={
             # 使用批量处理功能的Pipeline
             'gettnship.pipelines.GettnshipBatchPipeline': 300,
@@ -36,14 +36,13 @@ class GettnshipShipmentsSpider(BaseSpider, PlaywrightActions, HttpxAction):
 
     def debug_task(self):
         task = {
-            'spider_name': 'gettnship_shipments',
+            'batch_id': int(int(datetime.now().strftime('%Y%m%d%H%M')) / 10),
             'config_key': 'gettnship_user_money',
             'carrier': 'ups-v2',
 
             'zip_code': '34109',
             'start_date_1': str(datetime.today().date() - timedelta(days=3)),
             'start_date_2': str(datetime.today().date()),
-            'datetime': str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
         }
         return task
 
@@ -80,7 +79,10 @@ class GettnshipShipmentsSpider(BaseSpider, PlaywrightActions, HttpxAction):
         data = json.loads(response.text)
         shipments = data.get('data', {}).get('data', [])
         for shipment in shipments:
-            shipment.update(zip_code=task['zip_code'])
+            shipment.update(
+                zip_code=task['zip_code'],
+                batch_id=task['batch_id'],
+            )
             yield GettnshipShipmentsItem(**shipment)
 
 

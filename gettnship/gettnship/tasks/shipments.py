@@ -24,99 +24,25 @@ if __name__ == '__main__':
     task_manager = ShipmentsManager()
     org_ls = [
   {
-    "shipping_zip_code": "87012"
+    "shipping_zip_code": "70810"
   },
   {
-    "shipping_zip_code": "29591"
+    "shipping_zip_code": "95060"
   },
   {
-    "shipping_zip_code": "34109"
-  },
-  {
-    "shipping_zip_code": "24073"
-  },
-  {
-    "shipping_zip_code": "35170"
-  },
-  {
-    "shipping_zip_code": "38080"
-  },
-  {
-    "shipping_zip_code": "92881"
-  },
-  {
-    "shipping_zip_code": "70543"
-  },
-  {
-    "shipping_zip_code": "92583"
-  },
-  {
-    "shipping_zip_code": "11510"
-  },
-  {
-    "shipping_zip_code": "59500"
-  },
-  {
-    "shipping_zip_code": "20105"
-  },
-  {
-    "shipping_zip_code": "94538"
-  },
-  {
-    "shipping_zip_code": "62919"
-  },
-  {
-    "shipping_zip_code": "13850"
-  },
-  {
-    "shipping_zip_code": "30315"
-  },
-  {
-    "shipping_zip_code": "55414"
-  },
-  {
-    "shipping_zip_code": "34120"
-  },
-  {
-    "shipping_zip_code": "84073"
-  },
-  {
-    "shipping_zip_code": "02090"
-  },
-  {
-    "shipping_zip_code": "76557"
-  },
-  {
-    "shipping_zip_code": "34288"
-  },
-  {
-    "shipping_zip_code": "07631"
-  },
-  {
-    "shipping_zip_code": "77494"
-  },
-  {
-    "shipping_zip_code": "02904"
-  },
-  {
-    "shipping_zip_code": "22554"
-  },
-  {
-    "shipping_zip_code": "54000"
-  },
-  {
-    "shipping_zip_code": "83600"
+    "shipping_zip_code": "21214"
   }
 ]
     for org in org_ls:
         task = {
-            'spider_name': 'gettnship_shipments',
+          'batch_id': int(datetime.now().strftime('%Y%m%d%H'))-1,
+          'spider_name': 'gettnship_shipments',
             'config_key': 'gettnship_user_money',
             'carrier': 'ups-v2',
 
             'zip_code': org['shipping_zip_code'],
             'start_date_1': str(datetime.today().date() - timedelta(days=3)),
             'start_date_2': str(datetime.today().date()),
-            'datetime': str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+
         }
         task_manager.add_task('gettnship_shipments:queue', task)

@@ -60,6 +60,10 @@ class IntField(BaseField):
         super().__init__(type=int, **kwargs)
 
 
+class IntegerField(IntField):
+    pass
+
+
 class FloatField(BaseField):
     """浮点数字段，适用于存储带有小数的数值"""
     def __init__(self, **kwargs):

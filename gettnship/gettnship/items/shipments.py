@@ -24,6 +24,7 @@ class GettnshipShipmentsItem(BaseItem):
     parser_func_datetime = lambda str_data: parser.parse(str_data) if str_data else None
     parser_func_date = lambda str_data: parser.parse(str_data).date() if str_data else None
 
+    batch_id = models.IntField(verbose_name='批次ID')
     hash_id = models.CharField(max_length=248, unique=True, default='', verbose_name='哈希ID')
     platform = models.CharField(max_length=32, blank=True, null=True, verbose_name='平台')
     carrier = models.CharField(max_length=32, blank=True, null=True, verbose_name='承运商')

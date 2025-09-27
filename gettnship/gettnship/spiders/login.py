@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 
 import httpx
@@ -35,34 +36,13 @@ class GettnshipLoginSpider(BaseSpider, PlaywrightActions, HttpxAction):
 
     def debug_task(self):
         task = {
-            'spider_name': 'gettnship_login',
-            'url': 'https://www.gettnship.com/home',
-            'config_key': 'gettnship_user_money',
-            'datetime': str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            "redis_key": "gettnship_login:queue",
+            "config_key": "gettnship_user_money",
+            "batch_id": int(time.time()),
         }
         return task
 
     def start_task(self, task):
-        _init_scripts = [
-            '修改navigator.webdriver属性（常用的爬虫检测点）',
-            '修复navigator.permissions.query方法防止权限检测',
-            '模拟真实设备内存信息',
-            '设置多语言支持模拟真实用户',
-            '模拟浏览器插件信息防止无头检测',
-            '模拟硬件并发核心数',
-            '模拟电池API数据',
-            '设置文档来源引用',
-            '模拟触摸事件支持',
-            '禁用Chrome自动填充功能',
-            '模拟真实滚动行为',
-            '修复requestAnimationFrame方法',
-            '修改WebGL指纹特征',
-            '处理Cookie安全策略',
-            '代理XMLHttpRequest.send方法',
-            '设置浏览器厂商信息',
-            '模拟真实浏览器版本信息',
-            '模拟真实鼠标事件构造函数'
-        ]
         meta = dict(
             task=task,
             playwright=True,    # 启用 Playwright 下载器
@@ -73,7 +53,7 @@ class GettnshipLoginSpider(BaseSpider, PlaywrightActions, HttpxAction):
             playwright_page_methods=[],   # 定义 Playwright 页面对象的方法,可以写登录逻辑
         )
         yield scrapy.Request(
-            url=task['url'],
+            url='https://www.gettnship.com/home',
             meta=meta,
             callback=self.parse,
             dont_filter=True, # 不过滤重复请求
