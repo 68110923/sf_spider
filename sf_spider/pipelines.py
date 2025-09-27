@@ -100,29 +100,36 @@ class UniversalPostgreSQLPipeline:
                 elif 'default_factory' in field:
                     value = field['default_factory']()
                 else:
-                    continue  # 非必填且无默认值，跳过
+                    # 非必填且无默认值，显式设置为None并继续处理
+                    # 这样可以确保字段存在但值为None，在数据库中会存储为NULL
+                    validated_data[field_name] = None
+                    continue
 
             # 验证并尝试转换类型
             expected_type = field.get('type')
             if expected_type and not isinstance(value, expected_type):
-                # 首先检查是否有自定义的解析函数
-                parser_func = field.get('parser_func')
-                if parser_func and isinstance(value, str):
-                    try:
-                        value = parser_func(value)
-                        # 验证解析后的值是否为预期类型
-                        if not isinstance(value, expected_type):
-                            raise ValueError(f"解析后的值类型应为{expected_type.__name__}，实际为{type(value).__name__}")
-                    except Exception as e:
-                        raise ValueError(f"字段 {field_name} 解析失败: {str(e)}")
+                # 如果值为None且字段允许为空，跳过类型转换
+                if value is None and field.get('null', True):
+                    pass
                 else:
-                    # 尝试直接类型转换
-                    try:
-                        value = expected_type(value)
-                    except (ValueError, TypeError):
-                        raise ValueError(
-                            f"字段 {field_name} 类型错误，预期 {expected_type.__name__}，实际 {type(value).__name__}"
-                        )
+                    # 首先检查是否有自定义的解析函数
+                    parser_func = field.get('parser_func')
+                    if parser_func and isinstance(value, str):
+                        try:
+                            value = parser_func(value)
+                            # 验证解析后的值是否为预期类型
+                            if not isinstance(value, expected_type):
+                                raise ValueError(f"解析后的值类型应为{expected_type.__name__}，实际为{type(value).__name__}")
+                        except Exception as e:
+                            raise ValueError(f"字段 {field_name} 解析失败: {str(e)}")
+                    else:
+                        # 尝试直接类型转换
+                        try:
+                            value = expected_type(value)
+                        except (ValueError, TypeError):
+                            raise ValueError(
+                                f"字段 {field_name} 类型错误，预期 {expected_type.__name__}，实际 {type(value).__name__}"
+                            )
 
             # 验证长度限制
             max_length = field.get('max_length')
@@ -307,13 +314,30 @@ class UniversalPostgreSQLPipeline:
 
         try:
             data_list = self.batch_data[table_name]
-            fields = data_list[0].keys()
-            field_names = ", ".join(fields)
-            placeholders = ", ".join([f"%({k})s" for k in fields])
+            if not data_list:
+                return
+                
+            # 获取所有可能的字段（从第一个数据项的字段和表结构中获取）
+            all_fields = set()
+            for data in data_list:
+                all_fields.update(data.keys())
+            all_fields = sorted(all_fields)  # 保持字段顺序一致
+            
+            # 构建插入语句
+            field_names = ", ".join(all_fields)
+            placeholders = ", ".join([f"%({k})s" for k in all_fields])
+            
+            # 为每个数据项补充缺失的字段为None
+            complete_data_list = []
+            for data in data_list:
+                complete_data = {}
+                for field in all_fields:
+                    complete_data[field] = data.get(field)  # 缺失的字段设为None
+                complete_data_list.append(complete_data)
 
             # 执行批量插入
             query = f"INSERT INTO {table_name} ({field_names}) VALUES ({placeholders})"
-            psycopg2.extras.execute_batch(self.cur, query, data_list)
+            psycopg2.extras.execute_batch(self.cur, query, complete_data_list)
             self.conn.commit()
             
             # 清理批量数据
